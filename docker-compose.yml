@@ -1,0 +1,7 @@
+version: '2'
+
+services:
+  fuelscrap:
+    build: .
+    ports:
+        - "80:80"

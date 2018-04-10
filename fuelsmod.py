@@ -13,21 +13,18 @@ class FuelScrap(object):
         soup = BeautifulSoup(requested_page.text, 'html.parser')
         return soup
 
-    def _average_price(self, list_object):
-        return sum(list_object)/len(list_object)
-
-    def check_ua_95(self):
+    def check_ua(self, fuelnumber):
+        '''
+        if you want to receive average price of gasoline fuel type 1
+        in order to receive average price of diesel fuel type 2
+        '''
         soup = self._requesting_page(configuration.url_fuel_ua)
-        for element in soup.find_all('td', {"class": "a_95"}):
-            self.price_list.append(float(element.text))
-        return self._average_price(self.price_list)/self.dollar_price_ua()
-
-    def check_ua_diesel(self):
-        soup = self._requesting_page(configuration.url_fuel_ua)
-        for element in soup.find_all('td', {"class": "dp"}):
-            self.price_list.append(float(element.text))
-        return self._average_price(self.price_list)/self.dollar_price_ua()
-
+        price = ''
+        for element in soup.find_all('tfoot'):
+            for price in element.find_all('span', {"class":'value'})[-3:]:
+                self.price_list.append(price.text)
+        return float(self.price_list[fuelnumber])/self.dollar_price_ua()
+        
     def dollar_price_ua(self):
         soup = self._requesting_page(configuration.url_dollar_ua)
         for element in soup.find_all('tfoot', {"class": "service_bank_rates_usd"}):
@@ -43,15 +40,15 @@ class FuelScrap(object):
         for element in soup.find_all('div', {"class": "min_price"}):
             font_elements.append(element.font.text)
             self.price_list.append(element.sup.text)
-        return_str = str(font_elements[fuelnumber])+','+ str(self.price_list[fuelnumber])+'$'
-        return return_str
+        return_str = str(font_elements[fuelnumber])+','+ str(self.price_list[fuelnumber])
+        return str(return_str)
 
     def dollar_value_by(self):
         soup = self._requesting_page(configuration.url_dollar_by)
         value_str = ''
         for element in soup.find_all('div', {"class": "bank-info-head content_i calc_color"}):
             value_str = element.tbody.text[19:23]
-        return str(value_str)
+        return float(value_str)
 
     def check_by(self, fuelnumber):
         '''
@@ -60,24 +57,21 @@ class FuelScrap(object):
         soup = self._requesting_page(configuration.url_by)
         for element in soup.find_all('td', {"class": "col2"}):
             self.price_list.append(element.text)
-        return float(self.price_list[fuelnumber])/self.dollar_value_by()
+        to_return = float(self.price_list[fuelnumber])/self.dollar_value_by()
+        return str(to_return)
 
     def wrapping_prices(self):
         prices_dict = {}
         prices_dict["Fuels around the world"] = [{"Russia": {"gasoline 95" : self.check_ru(1),
-            "gasoline 98" : self.check_ru(2), "diesel": self.check_ru(3)}}, 
-            {"Ukraine": {"gasoline 95": self.check_ua_95(), "diesel": self.check_ua_diesel()}}]
+            "gasoline 98" : self.check_ru(2), "diesel": self.check_ru(3)}},
+            {"Ukraine": {"gasoline 95": self.check_ua(1), "diesel" : self.check_ua(2)}},
+            {"Belarus": {"gasoline 95": self.check_by(0), "diesel": self.check_by(2)}}]
         return prices_dict
 
 
 def main():
     fs = FuelScrap()
     print(fs.wrapping_prices())
-    print(fs.check_ua_diesel())
-    print(fs.check_ua_95())
-    print(fs.check_ru(3))
-    print(type(fs.check_ru(2)))
-    print(fs.check_ru(2))
-    print(fs.check_ru(1))
+
 if __name__ == '__main__':
     main()
